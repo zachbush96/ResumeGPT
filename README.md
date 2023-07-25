@@ -29,6 +29,8 @@ pip install -r requirements.txt
 
 # Run the main script
 python main.py
+'''
+
 Usage
 To use ResumeGPT, run the main.py script. This will start the application and you can interact with it via the index.html file.
 
