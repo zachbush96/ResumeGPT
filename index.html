@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Resume Generator</title>
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<style>
+    body {
+        text-align: center;
+    }
+    h1 {
+        font-size: 50px;
+    }
+    form {
+        margin: 0 auto;
+        width: 75%;
+    }
+    input[type=submit], button {
+        margin-top: 10px;
+        padding: 10px;
+        font-size: 20px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+    }
+    input[type=submit]:hover, button:hover {
+        background-color: #45a049;
+    }
+    textarea {
+        width: 100%;
+        padding: 12px 20px;
+        margin: 8px 0;
+        box-sizing: border-box;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+        background-color: #f8f8f8;
+        font-size: 20px;
+        resize: none;
+    }
+    label {
+        font-size: 20px;
+    }
+    .hidden {
+        display: none;
+    }
+    pre {
+        text-align: left;
+        width: 100%;
+        padding: 12px 20px;
+        margin: 8px 0;
+        box-sizing: border-box;
+        border: 2px solid #ccc;
+        border-radius: 4px;
+        background-color: #f8f8f8;
+        font-size: 20px;
+        resize: none;
+    }
+    .copy-button {
+    display: inline-block;
+    margin-left: 5px;
+    padding: 2px 6px;
+    font-size: 12px;
+    background-color: #e0e0e0;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    }
+</style>
+<body>
+    <h1>Custom Resume Generator</h1>
+    <h2>Either paste in a Resume or upload a txt file</h2>
+    <h2>Make sure to fill in the Job Description from an online posting</h2>
+    <button id="switch-input-method">Switch to paste resume</button>
+    <form action="/process" method="post" enctype="multipart/form-data">
+        <div id="file-upload-section">
+            <label for="resume">Upload Resume:</label>
+            <br>
+            <input type="file" id="resume" name="resume">
+            <br>
+        </div>
+        <div id="paste-resume-section" class="hidden">
+            <label for="resume-text">Paste Resume:</label>
+            <br>
+            <textarea id="resume-text" name="resume-text" rows="10" cols="100"></textarea>
+            <br>
+        </div>
+        <label for="job_description">Job Description:</label>
+        <br>
+        <textarea id="job_description" name="job_description" rows="10" cols="100"></textarea>
+        <br>
+        <input required type="submit" value="Generate Resume">
+        <h3>Resumes take about 30-45 seconds to generate</h3>
+        <br>
+    </form>
+	<label>Shrunk Resume</label>		
+	<pre id="shrunkResume"></pre>
+		<label>Shrunk Job Description</label>
+		<pre id="shrunkJobDescription"></pre>
+			<label>New Resume</label>
+		<pre contenteditable="true" id="resumeGoesHere">
+		</pre>
+  <script>
+    var switchInputMethodButton = document.getElementById("switch-input-method");
+    var fileUploadSection = document.getElementById("file-upload-section");
+    var pasteResumeSection = document.getElementById("paste-resume-section");
+    switchInputMethodButton.addEventListener("click", function() {
+        if (fileUploadSection.classList.contains("hidden")) {
+            fileUploadSection.classList.remove("hidden");
+            pasteResumeSection.classList.add("hidden");
+            switchInputMethodButton.textContent = "Switch to paste resume";
+        } else {
+            fileUploadSection.classList.add("hidden");
+            pasteResumeSection.classList.remove("hidden");
+            switchInputMethodButton.textContent = "Switch to upload resume";
+        }
+    });
+    var form = document.querySelector('form');
+    form.onsubmit = function() {
+      var resume = document.getElementById('resume').files[0];
+      var resumeText = document.getElementById('resume-text').value;
+      var job_description = document.getElementById('job_description').value;
+      var formData = new FormData();
+      formData.append('resume', resume);
+      formData.append('resume_text', resumeText);
+      formData.append('job_description', job_description);
+      var xhr = new XMLHttpRequest();
+      xhr.open('post', '/process');
+      xhr.onload = function() {
+	      console.log(xhr.responseText);
+	      var newElement = document.getElementById("resumeGoesHere")
+	      newElement.innerHTML = xhr.responseText.replace(/\n/g, '<br>');
+	      //ReAdd this line later if streaming doesnt work
+				//document.body.appendChild(newElement);
+    };
+    xhr.send(formData);
+    return false;
+  };
+		var socket = io();
+    socket.on('connect', function() {
+        console.log('Connected');
+    });
+    
+		socket.on('shrunkResume', function(data) {
+			console.log('ShrResum. Received:' , data);
+			var newLine = data.includes('\n') ? '\n' : '';
+			var shrunkResume = document.getElementById("shrunkResume");
+			shrunkResume.textContent += data + newLine;
+		});
+
+		socket.on('shrunkJob', function(data) {
+			console.log('shrJobD Received:', data);
+			var newLine = data.includes('\n') ? '\n' : '';
+			var shrunkJobDescription = document.getElementById("shrunkJobDescription");
+			shrunkJobDescription.textContent += data + newLine;
+		})
+		
+		socket.on('token', function(data) {
+        console.log('Received:', data);
+      	var newLine = data.includes('\n') ? '\n' : '';
+        var resumeGoesHere = document.getElementById("resumeGoesHere");
+        resumeGoesHere.textContent += data + newLine;
+    });
+  </script>
+</body>
+</html>
